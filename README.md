@@ -8,8 +8,8 @@ The only one that is really not available elsewhere if the spline_moments() one.
     to form the specific type of splines. Note that because of that, the natural spline function is not the most 
     efficient possible as in principle it can be written more simply by eliminating one row and one column. 
 
-      2. For the case with fixed first derivatives, there exist an iterative algorithm. It is possible to use it by 
-         choosing the parameter iterative=True in the function spline_1stderiv.
+2.  For the case with fixed first derivatives, there exist an iterative algorithm. It is possible to use it by 
+    choosing the parameter iterative=True in the function spline_1stderiv.
             
             -The core function for the iterative algorithm is written in C. To use it, the C codes must be compiled 
              in the same directory where spline_lib.py and firstDerivSpline.c are. The compilation line is just for 
