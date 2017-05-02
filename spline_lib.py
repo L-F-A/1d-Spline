@@ -3,38 +3,60 @@ from scipy.sparse import lil_matrix
 from scipy.sparse.linalg.dsolve import linsolve
 import math
 from StandardUseful import locate
+from numpy.ctypeslib import ndpointer
+import ctypes
+import os
 
+"""
 ####################################################################################################
 #         This is a simple library that offers few cublic splines for 1d interpolation		   #
 #												   #
 #           Louis-Francois Arsenault, Columbia University la2518@columbia.edu (2013-2017)	   #
 ####################################################################################################
-#												   #
-#	1. Natural as spline_natural(x,f,n)							   #
-#												   #
-#	2. End points derivatives fixed as spline_1stderiv(x,f,df0,df1,n)			   #
-#												   #
-#	3. Parabolically-terminated as spline_parabolic(x,f,n)					   #
-#												   #
-#	4. Special form where one knows two constants such that f'(x0)+f'(xf) = mu1 and		   #
-#	   -f''(x0)-f''(xf) = mu2 as spline_moments(x,f,mu1,mu2,n), see for example Appendix B of  #
-# 	   http://e-collection.library.ethz.ch/eserv/eth:31103/eth-31103-02.pdf			   #
-#												   #
-#	INPUTS:											   #
-#	  											   #
-#	  x 	  : the points where the function is known					   #
-#												   #
-#	  f 	  : the values of the function a the x						   #
-#												   #
-#	  n 	  : how many points								   #
-#	Possible:										   #
-#												   #
-#	  df0 	  : first derivative at x0							   #
-#												   #
-#	  df1 	  : first derivate at xf							   #
-#												   #
-#	  mu1,mu2 : knowns constants								   #
-####################################################################################################
+												   
+	1. Natural as spline_natural(x,f,n)							   
+												   
+	2. End points derivatives fixed as spline_1stderiv(x,f,df0,df1,n,iterative=False)	   
+												   
+	3. Parabolically-terminated as spline_parabolic(x,f,n)					   
+												   
+	4. Special form where one knows two constants such that f'(x0)+f'(xf) = mu1 and		   
+	   -f''(x0)-f''(xf) = mu2 as spline_moments(x,f,mu1,mu2,n), see for example Appendix B of  
+ 	   http://e-collection.library.ethz.ch/eserv/eth:31103/eth-31103-02.pdf			   
+												   
+	INPUTS:											   
+	  											   
+	  x 	    : the points where the function is known					   
+												   
+	  f 	    : the values of the function a the x						 
+												   
+	  n 	    : how many points								   
+	Possible:										   
+												   
+	  df0 	    : first derivative at x0							   
+												   
+	  df1 	    : first derivate at xf							   
+
+	  iterative : the case with fixed derivative offers the possibility of using the known 
+		      iterative algorithm rather than the matrix problem. The algorithm, using a C
+		      implementation is much faster than the matrix one. However, in rare instances, 
+		      it has been reported that the iterative algorithm can be unstable. Hence beware 
+		      that rarely it can return unstable solutions.
+												   
+	  mu1,mu2   : known constants
+
+	OUTPUTS:
+
+	  COEFFS    : matrix (n-1)x4 containing the spline coefficients								   
+"""
+
+#Load the c function regarding spline with fixed first derivative###################################
+dir_path = os.path.dirname(os.path.realpath(__file__))
+_lib = ctypes.cdll.LoadLibrary(dir_path+"/firstDerivSpline.so")
+_func=_lib.spline_coefficients_deriv
+_func.restype=None
+_func.argtypes=[ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"),ctypes.c_int]
+#######################################################################################################
 
 def UnderCompletedAmatrix(n):
     A = lil_matrix((n,n))
@@ -169,50 +191,56 @@ def spline_parabolic(x,f,n):
 
     return COEFFS    
 
-def spline_1stderiv(x,f,df0,df1,n):
+def spline_1stderiv(x,f,df0,df1,n,iterative=False):
 #spline where first derivatives at both end are fixed
 
     #df0 is the value of the first derivative at the beginning
     #df1 is the value of the first derivative at the end
+	if iterative==False:
+    		A = UnderCompletedAmatrix(n)
+    		B = UndercompletedBmatrix(n,f)     
     
-    A = UnderCompletedAmatrix(n)
-    B = UndercompletedBmatrix(n,f)     
+    		h = (x[-1]-x[0])/(n-1);
+
+    		B[0] = f[1] - f[0] - df0*h
+    		B[-1] = df1*h - f[-1] + f[-2] 
+    		B = 6./h/h*B
+
+    		A[0,0] = 2.
+    		A[0,1] = 1.
+    		A[n-1,n-1] = 2.
+    		A[n-1,n-2] = 1.
+
+    		A = A.tocsr()
+    		M = linsolve.spsolve(A, B)
+
+    		a = np.zeros(n-1)
+    		b = np.zeros(n-1)
+    		c = np.zeros(n-1)
+    		d = f[0:n-1].copy()
     
-    h = (x[-1]-x[0])/(n-1);
-
-    B[0] = f[1] - f[0] - df0*h
-    B[-1] = df1*h - f[-1] + f[-2] 
-    B = 6./h/h*B
-
-    A[0,0] = 2.
-    A[0,1] = 1.
-    A[n-1,n-1] = 2.
-    A[n-1,n-2] = 1.
-
-    A = A.tocsr()
-    M = linsolve.spsolve(A, B)
-
-    a = np.zeros(n-1)
-    b = np.zeros(n-1)
-    c = np.zeros(n-1)
-    d = f[0:n-1].copy()
-    
-    for r in range(0,n-1):
-        a[r] = (M[r+1]-M[r])/6./h;
-        b[r] = 0.5*M[r];
-        c[r] = ( f[r+1]-f[r] )/h - h/6.*(M[r+1]+2.*M[r])
+    		for r in range(0,n-1):
+        		a[r] = (M[r+1]-M[r])/6./h;
+        		b[r] = 0.5*M[r];
+        		c[r] = ( f[r+1]-f[r] )/h - h/6.*(M[r+1]+2.*M[r])
 
     
-    COEFFS = np.zeros((n-1,4))
-    COEFFS[:,0] = a.copy()
-    COEFFS[:,1] = b.copy() 
-    COEFFS[:,2] = c.copy()
-    COEFFS[:,3] = d.copy()
+    		COEFFS = np.zeros((n-1,4))
+    		COEFFS[:,0] = a.copy()
+    		COEFFS[:,1] = b.copy() 
+    		COEFFS[:,2] = c.copy()
+    		COEFFS[:,3] = d.copy()
+	else:
+		COEFFS=np.zeros(4*(n-1))
+		fp=np.array([df0,df1])
+		_func(x,f,fp,COEFFS,n)
+		COEFFS=COEFFS.reshape(n-1,4)[:,::-1]
 
-    return COEFFS
+	return COEFFS
 
 def spline_eval(x,COEFFS,xx):
-#Evaluates the spline prediction at point x
+#Evaluates the spline prediction at point x provided COEFFS and the x at which the spline
+#was constructed
     y = np.zeros(len(x))
     for r in range(0,len(x)):
         ind = locate(x[r],xx)
