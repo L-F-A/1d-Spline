@@ -192,11 +192,14 @@ def spline_parabolic(x,f,n):
     return COEFFS    
 
 def spline_1stderiv(x,f,df0,df1,n,iterative=False):
-#spline where first derivatives at both end are fixed
 
-    #df0 is the value of the first derivative at the beginning
-    #df1 is the value of the first derivative at the end
+#spline where first derivatives at both end are fixed
+#
+#	df0 is the value of the first derivative at the beginning
+#	df1 is the value of the first derivative at the end
+
 	if iterative==False:
+
     		A = UnderCompletedAmatrix(n)
     		B = UndercompletedBmatrix(n,f)     
     
@@ -231,6 +234,7 @@ def spline_1stderiv(x,f,df0,df1,n,iterative=False):
     		COEFFS[:,2] = c.copy()
     		COEFFS[:,3] = d.copy()
 	else:
+
 		COEFFS=np.zeros(4*(n-1))
 		fp=np.array([df0,df1])
 		_func(x,f,fp,COEFFS,n)
