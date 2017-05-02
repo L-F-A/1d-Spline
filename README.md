@@ -11,7 +11,9 @@ The only one that is really not available elsewhere if the spline_moments() one.
       2. For the case with fixed first derivatives, there exist an iterative algorithm. It is possible to use it by 
          choosing the parameter iterative=True in the function spline_1stderiv.
             
-            -The core function for the iterative algorithm is written in C. To use it, the C codes must be compiled in the same directory                where spline_lib.py and firstDerivSpline.c are. The compilation line is just for Linux (I guess Mac to):
+            -The core function for the iterative algorithm is written in C. To use it, the C codes must be compiled 
+             in the same directory where spline_lib.py and firstDerivSpline.c are. The compilation line is just for 
+             Linux (I guess Mac to):
 
                                     gcc -shared -fPIC firstDerivSpline.c -o firstDerivSpline.so
 
