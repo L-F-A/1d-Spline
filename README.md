@@ -12,9 +12,9 @@ The only one that is really not available elsewhere if the spline_moments() one.
     choosing the parameter iterative=True in the function spline_1stderiv. While it is much faster, in rare cases, 
     the iterative algorithm can be unstable. So keep it in mind when using it.
             
-            -The core function for the iterative algorithm is written in C. To use it, the C codes must be compiled 
-             in the same directory where spline_lib.py and firstDerivSpline.c are. The compilation line is just for 
-             Linux (I guess Mac to):
+            -The core function for the iterative algorithm is written in C. To use it, the C codes must be 
+             compiled in the same directory where spline_lib.py and firstDerivSpline.c are. The compilation
+             line is just for Linux (I guess Mac to):
 
                                     gcc -shared -fPIC firstDerivSpline.c -o firstDerivSpline.so
 
